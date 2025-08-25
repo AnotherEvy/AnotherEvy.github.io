@@ -1,0 +1,877 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Evy Archive</title>
+  <style>
+    :root{
+      --bg:#0b0b0f;--card:#13131a;--ink:#e8e8ef;--muted:#a9a9b6;--brand:#8b5cf6;--brand-2:#22d3ee;
+      --gap:18px;--radius:16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#0b0b10,#0a0a12 40%,#0e0e15);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Ubuntu,"Helvetica Neue",Arial,sans-serif;}
+    .container{max-width:1200px;margin-inline:auto;padding:24px}
+    header{position:sticky;top:0;z-index:50;background:linear-gradient(180deg,rgba(11,11,15,.9),rgba(11,11,15,.6) 70%,transparent);backdrop-filter:saturate(120%) blur(6px)}
+    .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 0}
+    .title{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px}
+    .title .logo{width:28px;height:28px;border-radius:8px;background:conic-gradient(from 210deg at 50% 50%,var(--brand),var(--brand-2),var(--brand));box-shadow:0 0 0 2px #0008}
+    .controls{display:flex;gap:10px;flex-wrap:wrap}
+    .field{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid #2a2a38;border-radius:12px;padding:8px 10px}
+    .field input,.field select{all:unset;color:var(--ink)}
+    .field input{width:220px}
+    .btn{all:unset;cursor:pointer;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#0b0b0f;padding:10px 12px;border-radius:12px;font-weight:700;box-shadow:0 6px 16px #0008}
+    .btn:active{transform:translateY(1px)}
+.field select {
+  background: var(--card);
+  border-radius: 8px;
+  padding: 4px 6px;
+  color: var(--ink);
+}
+.field select option {
+  background: var(--card);
+  color: var(--ink);
+}
+
+    /* Grid */
+    .grid{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:var(--gap);margin-top:16px}
+    @media (min-width:560px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (min-width:900px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+    .card{position:relative;background:var(--card);border:1px solid #232330;border-radius:var(--radius);overflow:hidden;box-shadow:0 6px 28px rgba(0,0,0,.35);cursor:pointer}
+    .media{position:relative;background:#0c0c12;display:flex;align-items:center;justify-content:center}
+    .media img,.media video{max-width:100%;max-height:100%;object-fit:contain}
+
+    /* Overlay con fecha */
+    .overlay{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(180deg,rgba(0,0,0,.0),rgba(0,0,0,.45) 40%,rgba(0,0,0,.75));opacity:0;transition:opacity .2s ease}
+    .card:hover .overlay,.card:focus-within .overlay{opacity:1}
+    .date-badge{font-size:clamp(16px,3vw,24px);font-weight:800;letter-spacing:.6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(6px);padding:10px 14px;border-radius:999px;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+
+    .meta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px}
+    .meta .left{display:flex;align-items:center;gap:8px;min-width:0}
+    .title-text{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .chip{font-size:12px;color:var(--muted);border:1px solid #2f2f3d;padding:4px 8px;border-radius:999px}
+
+    /* Modal */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .3s ease}
+    .modal.active{opacity:1;pointer-events:auto}
+    .modal img{max-width:90%;max-height:90%;border-radius:12px;box-shadow:0 0 40px #000}
+
+    /* Ayuda / footer */
+    details.guide{margin-top:18px;background:rgba(255,255,255,.04);border:1px dashed #2a2a38;border-radius:12px;padding:12px}
+    details.guide summary{cursor:pointer;font-weight:700}
+    .credits{color:#9aa;opacity:.7;font-size:12px;text-align:center;margin:24px 0}
+
+    @media (prefers-reduced-motion: reduce){
+      .overlay{transition:none}
+      .modal{transition:none}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container toolbar">
+      <div class="title"><div class="logo"></div><div>Evy Archive — <span style="opacity:.8">Timeline</span></div></div>
+      <div class="controls">
+        <label class="field" title="Buscar por título o etiquetas">
+          <span>🔎</span>
+          <input id="q" placeholder="Buscar… (título/etiquetas)" />
+        </label>
+        <label class="field" title="Filtrar por año">
+          <span>🗓️</span>
+          <select id="year">
+            <option value="">Todos los años</option>
+          </select>
+        </label>
+        <label class="field" title="Ordenar por fecha">
+          <span>↕️</span>
+          <select id="sort">
+            <option value="desc">Más nuevo primero</option>
+            <option value="asc">Más viejo primero</option>
+          </select>
+        </label>
+        <button class="btn" id="reset">Limpiar filtros</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="grid" class="grid" aria-live="polite"></section>
+
+    <details class="guide">
+      <summary>¿Cómo agrego mis imágenes / gifs / videos?</summary>
+      <div style="margin-top:8px;line-height:1.6">
+        <ol>
+          <li>Guarda tus archivos (JPG/PNG/GIF/MP4/WebM) en una carpeta junto al HTML, por ejemplo <code>media/</code>.</li>
+          <li>Duplica uno de los objetos del arreglo <code>GALERIA</code> en el script de abajo y cambia:
+            <ul>
+              <li><code>tipo</code>: "img" | "gif" | "video"</li>
+              <li><code>src</code>: ruta del archivo (ej: <code>media/mi_dibujo_01.jpg</code>)</li>
+              <li><code>titulo</code>: nombre de la pieza</li>
+              <li><code>fecha</code>: en formato <code>AAAA-MM-DD</code> (se muestra al poner el mouse encima)</li>
+              <li><code>etiquetas</code>: palabras clave para buscar (ej: <code>["retrato","estilo-nuevo"]</code>)</li>
+            </ul>
+          </li>
+          <li>Opcional: Para videos, si quieres controles visibles, cambia <code>controles: true</code>.</li>
+        </ol>
+      </div>
+    </details>
+
+    <p class="credits">Hecho con 💜 para guardar tu evolución artística.</p>
+  </main>
+
+  <!-- Modal para mostrar imagen completa -->
+  <div id="modal" class="modal"><img id="modal-img" src="" alt="" /></div>
+
+  <script>
+    const GALERIA = [
+      {
+        tipo: 'img',
+        src: 'media/dibujo_001.png',
+        titulo: 'Penny Pokemon Escarlata',
+        fecha: '2025-02-18',
+        etiquetas: ['personaje','pokemon','digital','dibujo','videojuego','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_002.jpg',
+        titulo: 'Florry Año Nuevo',
+        fecha: '2025-01-01',
+        etiquetas: ['personaje','oc','digital','dibujo','twiter','x','doodle','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_003.jpg',
+        titulo: 'Florry Vampiro',
+        fecha: '2024-10-11',
+        etiquetas: ['personaje','oc','digital','dibujo','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_004.jpg',
+        titulo: 'Kasane Teto',
+        fecha: '2024-12-29',
+        etiquetas: ['personaje','digital','dibujo','vocaloid','sythsv','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_005.png',
+        titulo: 'Florry Bleeeh :P',
+        fecha: '2024-09-09',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_006.jpg',
+        titulo: 'Kendo o algo no se',
+        fecha: '2022-09-06',
+        etiquetas: ['personaje','digital','dibujo','youtuber','youtube','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_007.jpg',
+        titulo: 'Fzst',
+        fecha: '2023-02-14',
+        etiquetas: ['personaje','digital','dibujo','youtuber','youtube','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_008.jpg',
+        titulo: 'Florry Diseño final o algo asi',
+        fecha: '2023-03-29',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_009.jpg',
+        titulo: 'Florry en el chedraui',
+        fecha: '2023-08-10',
+        etiquetas: ['personaje','digital','dibujo','oc','twitter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_010.jpg',
+        titulo: 'Secondbunny_ (cuenta suspendida de twitter)',
+        fecha: '2023-08-12',
+        etiquetas: ['personaje','digital','dibujo','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_011.jpg',
+        titulo: 'Live caballerito reaction',
+        fecha: '2023-08-14',
+        etiquetas: ['personaje','digital','dibujo','videojuego','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_012.jpg',
+        titulo: 'Live Broken Vessel reaction',
+        fecha: '2023-08-14',
+        etiquetas: ['personaje','digital','dibujo','videojuego','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_013.jpg',
+        titulo: 'Oc de Bop o algo asi',
+        fecha: '2023-08-17',
+        etiquetas: ['personaje','digital','dibujo','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_014.jpg',
+        titulo: 'Dibujo De Ralsei Rapido',
+        fecha: '2023-08-21',
+        etiquetas: ['personaje','digital','dibujo','videojuego','twiter','x', 'doodle','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_015.jpg',
+        titulo: 'Florry en la chamba',
+        fecha: '2023-09-25',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_016.jpg',
+        titulo: 'Florry cuartetos de nos',
+        fecha: '2023-09-28',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_017.jpg',
+        titulo: 'Florry flores moradas',
+        fecha: '2023-10-12',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_018.jpg',
+        titulo: 'Florry holowin',
+        fecha: '2023-11-01',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_019.jpg',
+        titulo: 'Florry cenando',
+        fecha: '2024-02-15',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_020.jpg',
+        titulo: 'Florry explocion',
+        fecha: '2024-03-18',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_021.jpg',
+        titulo: 'Florry "im fine"',
+        fecha: '2024-05-18',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_022.jpg',
+        titulo: 'Florry fototeta',
+        fecha: '2024-05-22',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x', 'doodle','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_023.jpg',
+        titulo: 'La mirada de las mil Florrys',
+        fecha: '2024-06-13',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_024.jpeg',
+        titulo: 'Florry y su pasaporte de la verga',
+        fecha: '2024-06-15',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_025.jpg',
+        titulo: 'Florry has a bomb',
+        fecha: '2024-07-06',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_026.jpg',
+        titulo: 'Florry o algo no se',
+        fecha: '2024-07-07',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_027.jpg',
+        titulo: 'Niko Oneshot',
+        fecha: '2024-08-01',
+        etiquetas: ['personaje','digital','dibujo','videojuego','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_028.jpg',
+        titulo: 'Niko y Florry',
+        fecha: '2024-08-01',
+        etiquetas: ['personaje','digital','dibujo','videojuego','oc','twiter','x', 'doodle','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_029.jpg',
+        titulo: 'Hatsune Miku',
+        fecha: '2024-08-02',
+        etiquetas: ['personaje','digital','dibujo','vocaloid','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_030.jpg',
+        titulo: 'Florry o algo no se parte 2',
+        fecha: '2024-08-22',
+        etiquetas: ['personaje','digital','dibujo','oc','twiter','x','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_031.png',
+        titulo: 'Primer diseño de Florry',
+        fecha: '2021-12-21',
+        etiquetas: ['personaje','digital','dibujo','oc','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_032.png',
+        titulo: 'Segundo diseño de Florry',
+        fecha: '2022-05-20',
+        etiquetas: ['personaje','digital','dibujo','oc','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_033.png',
+        titulo: 'Segundo diseño de Florry que nunca use',
+        fecha: '2022-05-22',
+        etiquetas: ['personaje','digital','dibujo','oc','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_034.png',
+        titulo: 'Otro oc a la verga (que nunca use)',
+        fecha: '2022-12-15',
+        etiquetas: ['personaje','digital','dibujo','oc','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_035.png',
+        titulo: 'Ralsei Deltarune',
+        fecha: '2022-12-16',
+        etiquetas: ['personaje','digital','dibujo','videojuego','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_036.jpg',
+        titulo: 'CAPTADO EN CAMARA',
+        fecha: '2023-01-28',
+        etiquetas: ['personaje','digital','dibujo','oc','doodle','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_037.png',
+        titulo: 'Furro del macdonal',
+        fecha: '2023-06-09',
+        etiquetas: ['personaje','digital','dibujo','oc','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_038.png',
+        titulo: 'Team Spring Payday',
+        fecha: '2023-06-24',
+        etiquetas: ['personaje','digital','dibujo','oc','team spring','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_039.png',
+        titulo: 'Ralsei pide un taxi en alemania',
+        fecha: '2023-07-12',
+        etiquetas: ['personaje','digital','dibujo','videojuego','edgy','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_040.png',
+        titulo: 'Florry diseño final sentada',
+        fecha: '2023-07-26',
+        etiquetas: ['personaje','digital','dibujo','oc','doodle','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_041.png',
+        titulo: 'Florry conoce a peso pluma',
+        fecha: '2025-07-12',
+        etiquetas: ['personaje','digital','dibujo','oc','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_042.png',
+        titulo: 'Miniatura Video de The finals',
+        fecha: '2024-11-28',
+        etiquetas: ['personaje','digital','dibujo','oc','team spring','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_043.png',
+        titulo: 'Wallpaper del Team spring para pc',
+        fecha: '2024-04-25',
+        etiquetas: ['personaje','digital','dibujo','oc','team spring','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_044.png',
+        titulo: 'Lethal company be like',
+        fecha: '2024-04-08',
+        etiquetas: ['personaje','digital','dibujo','oc','team spring','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_045.png',
+        titulo: 'Florry con Canelita Animal crossing',
+        fecha: '2024-05-22',
+        etiquetas: ['personaje','digital','dibujo','oc','videojuego','animal crossing','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_046.png',
+        titulo: 'Komasan de Yo kai Watch',
+        fecha: '2024-05-27',
+        etiquetas: ['personaje','digital','dibujo','yokai watch','videojuego','anime','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_047.png',
+        titulo: 'Florry pc hecha mierda',
+        fecha: '2024-06-17',
+        etiquetas: ['personaje','digital','dibujo','oc','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_048.png',
+        titulo: 'Spring fiesta wallpaper',
+        fecha: '2024-07-29',
+        etiquetas: ['personaje','digital','dibujo','oc','team spring','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_049.png',
+        titulo: 'Ralsei deltarune 2',
+        fecha: '2024-07-27',
+        etiquetas: ['personaje','digital','dibujo','videojuego','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_050.png',
+        titulo: 'Florry silly jeje :3',
+        fecha: '2025-02-21',
+        etiquetas: ['personaje','digital','dibujo','oc','img']
+      },
+      {
+        tipo: 'img',
+        src: 'media/dibujo_051.png',
+        titulo: 'Florry dibujado en tableta nueva',
+        fecha: '2025-05-31',
+        etiquetas: ['personaje','digital','dibujo','oc','img']
+      },
+      {
+        tipo: 'gif',
+        src: 'media/gif_001.gif',
+        titulo: 'Florry banana',
+        fecha: '2025-07-30',
+        etiquetas: ['animación','gif','divertido','digital','twitter','x','oc']
+      },
+      {
+        tipo: 'gif',
+        src: 'media/gif_002.gif',
+        titulo: 'Gato pendejo hablando en television',
+        fecha: '2023-07-04',
+        etiquetas: ['animación','gif','digital','doodle']
+      },
+      {
+        tipo: 'gif',
+        src: 'media/gif_003.gif',
+        titulo: 'Florry corriendo',
+        fecha: '2023-08-07',
+        etiquetas: ['animación','gif','digital','oc']
+      },
+      {
+        tipo: 'gif',
+        src: 'media/gif_004.gif',
+        titulo: 'Florry aplaudiendo',
+        fecha: '2023-09-15',
+        etiquetas: ['animación','gif','digital','oc']
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_001.jpg',
+        titulo: 'Florry en plastilina',
+        fecha: '2023-03-29',
+        etiquetas: ['personaje','oc','micelanio','otros','plastilina','twiter','x','misc']
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_002.jpg',
+        titulo: 'Doodles varios pt. 1',
+        fecha: '2022-12-04',
+        etiquetas: ['personaje','oc','micelanio','otros','papel','videojuego','doodle','misc']
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_003.png',
+        titulo: 'Doodles varios pt. 2',
+        fecha: '2022-12-12',
+        etiquetas: ['personaje','oc','micelanio','otros','digital','videojuego','doodle','misc']
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_004.jpg',
+        titulo: 'Ralsei de plastilina',
+        fecha: '2023-03-30',
+        etiquetas: ['personaje','micelanio','otros','plastilina','videojuego','misc']
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_005.png',
+        titulo: 'Doodle de ocs que no use',
+        fecha: '2023-05-12',
+        etiquetas: ['personaje','digital','dibujo','oc','doodle','micelanio','otros','misc']
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_006.png',
+        titulo: 'Imagen de mi playlist 2023-2025 spotify',
+        fecha: '2023-10-11',
+        etiquetas: ['personaje','digital','dibujo','oc','micelanio','otros','misc']
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_007.png',
+        titulo: 'Eat grass',
+        fecha: '2024-06-01',
+        etiquetas: ['personaje','digital','dibujo','oc','micelanio','otros','misc','doodle']
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_008.png',
+        titulo: 'Boceto descartado 1',
+        fecha: '2024-07-22',
+        etiquetas: ['personaje','digital','dibujo','oc','micelanio','otros','misc','doodle','boceto']
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_009.png',
+        titulo: 'Florry chingandose un pastel',
+        fecha: '2024-07-27',
+        etiquetas: ['personaje','digital','dibujo','oc','micelanio','otros','misc','doodle']
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_010.png',
+        titulo: 'Spring sabias que?',
+        fecha: '2024-07-27',
+        etiquetas: ['personaje','digital','dibujo','oc','micelanio','otros','misc','doodle', 'team spring'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_011.png',
+        titulo: 'Que es un blowjob?',
+        fecha: '2024-07-27',
+        etiquetas: ['personaje','digital','dibujo','oc','micelanio','otros','misc','doodle','team spring'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_012.png',
+        titulo: 'Boceto descartado 8',
+        fecha: '2024-11-10',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','doodle', 'boceto','anime'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_013.png',
+        titulo: 'Boceto descartado 7',
+        fecha: '2024-11-10',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','doodle', 'boceto', 'animal crossing','videojuego'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_014.png',
+        titulo: 'Boceto descartado 6',
+        fecha: '2024-11-10',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','doodle', 'boceto','oc'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_015.png',
+        titulo: 'Boceto descartado 5',
+        fecha: '2024-11-10',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','doodle', 'boceto','anime'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_016.png',
+        titulo: 'Boceto descartado 4',
+        fecha: '2024-11-10',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','doodle', 'boceto','anime'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_017.png',
+        titulo: 'Boceto descartado 3',
+        fecha: '2024-11-10',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','doodle', 'boceto','oc'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_018.png',
+        titulo: 'Boceto descartado 2',
+        fecha: '2024-11-10',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','doodle', 'boceto','oc'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_019.jpg',
+        titulo: 'Florry en webfishing',
+        fecha: '2024-11-27',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','doodle','oc'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_020.png',
+        titulo: 'Florry pendeja',
+        fecha: '2025-01-15',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','doodle','oc'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_021.png',
+        titulo: 'BUUUUH SAQUENLA',
+        fecha: '2025-02-02',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','doodle','oc'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_022.jpg',
+        titulo: 'Boceto descartado 9',
+        fecha: '2025-02-06',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','doodle', 'boceto','oc'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_023.png',
+        titulo: 'FLORY VOLANDO DISPARANDO RAYOS LASER CON UN DINOSAURIO POR DETRAS Y VOMITANDO ARCOIRIS',
+        fecha: '2025-03-04',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','doodle', 'boceto','oc'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_024.png',
+        titulo: 'NOOOOOOOOO',
+        fecha: '2025-07-11',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','doodle', 'team spring','oc'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_025.jpg',
+        titulo: 'Florry y el Tung sahur',
+        fecha: '2025-08-16',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','doodle', 'boceto','oc'],
+      },
+      {
+        tipo: 'misc',
+        src: 'media/misc_026.png',
+        titulo: 'Florry castle crasher preview 1',
+        fecha: '2025-08-20',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','videojuego','oc'],
+      },
+     {
+        tipo: 'misc',
+        src: 'media/misc_027.png',
+        titulo: 'Florry castle crasher preview 2',
+        fecha: '2025-08-20',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','videojuego','oc'],
+      },
+     {
+        tipo: 'misc',
+        src: 'media/misc_028.png',
+        titulo: 'Florry castle crasher preview 3',
+        fecha: '2025-08-20',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','videojuego','oc'],
+      },
+     {
+        tipo: 'misc',
+        src: 'media/misc_029.jpg',
+        titulo: 'Florry y un oc que nunca use (sin cortar es lost media)',
+        fecha: '2025-02-06',
+        etiquetas: ['personaje','digital','dibujo','micelanio','otros','misc','boceto','oc'],
+      },
+      {
+        tipo: 'video',
+        src: 'media/video_001.mp4',
+        titulo: 'Florry crima',
+        fecha: '2023-12-25',
+        etiquetas: ['personaje','digital','video','oc','twiter','x'],
+        controles: true
+      },
+      {
+        tipo: 'video',
+        src: 'media/video_002.mp4',
+        titulo: 'Oye, y si lo matamos?',
+        fecha: '2023-07-22',
+        etiquetas: ['personaje','digital','video','oc','team spring'],
+        controles: true
+      },
+    ];
+
+    const $grid = document.getElementById('grid');
+    const $q = document.getElementById('q');
+    const $year = document.getElementById('year');
+    const $sort = document.getElementById('sort');
+    const $reset = document.getElementById('reset');
+    const $modal = document.getElementById('modal');
+    const $modalImg = document.getElementById('modal-img');
+
+    function normalizarFecha(str){
+      const m = String(str || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      return m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+    }
+    function formatearFechaHumana(str){
+      const iso = normalizarFecha(str);
+      if(!iso) return str || '';
+      const d = new Date(iso + 'T00:00:00');
+      return new Intl.DateTimeFormat('es-MX', { dateStyle:'medium' }).format(d);
+    }
+    function anioDe(str){
+      const iso = normalizarFecha(str);
+      return iso ? iso.slice(0,4) : '';
+    }
+
+    function render(items){
+      $grid.innerHTML = '';
+      items.forEach(item => {
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.dataset.fecha = normalizarFecha(item.fecha);
+        card.dataset.anio = anioDe(item.fecha);
+        card.dataset.titulo = (item.titulo||'').toLowerCase();
+        card.dataset.etiquetas = (item.etiquetas||[]).join(' ').toLowerCase();
+
+        const media = document.createElement('div');
+        media.className = 'media';
+
+        let el;
+	if(item.tipo === 'video'){
+  	el = document.createElement('video');
+  	el.src = item.src;
+  	el.loop = true;
+  	el.playsInline = true; // mejora en móviles
+	  if(item.controles){
+	    el.controls = true;
+	  } else {
+	    el.muted = true; // solo los que quieras silenciados
+	  }
+	} else {
+          el = document.createElement('img');
+          el.src = item.src;
+          el.loading = 'lazy';
+          el.alt = item.titulo || 'pieza';
+        }
+        media.appendChild(el);
+
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay';
+        const badge = document.createElement('div');
+        badge.className = 'date-badge';
+        badge.textContent = formatearFechaHumana(item.fecha);
+        overlay.appendChild(badge);
+        media.appendChild(overlay);
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        const left = document.createElement('div');
+        left.className = 'left';
+        const title = document.createElement('div');
+        title.className = 'title-text';
+        title.textContent = item.titulo || 'Sin título';
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = anioDe(item.fecha) || 's/f';
+        left.appendChild(title);
+        meta.appendChild(left);
+        meta.appendChild(chip);
+
+        card.appendChild(media);
+        card.appendChild(meta);
+
+        if(item.tipo === 'video'){
+          card.addEventListener('mouseenter',()=>{ el.play().catch(()=>{}); });
+          card.addEventListener('mouseleave',()=>{ el.pause(); });
+        }
+
+        if(item.tipo !== 'video'){
+          card.addEventListener('click', ()=>{
+            $modalImg.src = item.src;
+            $modal.classList.add('active');
+          });
+        }
+
+        $grid.appendChild(card);
+      });
+    }
+
+    function poblarAnios(items){
+      const anios = Array.from(new Set(items.map(x => anioDe(x.fecha)).filter(Boolean))).sort((a,b)=>b.localeCompare(a));
+      anios.forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = y; opt.textContent = y; $year.appendChild(opt);
+      });
+    }
+
+    function aplicarFiltros(){
+      const term = ($q.value || '').trim().toLowerCase();
+      const y = $year.value;
+      const s = $sort.value;
+
+      let items = [...GALERIA];
+
+      if(term){
+        items = items.filter(x =>
+          (x.titulo||'').toLowerCase().includes(term) ||
+          (x.etiquetas||[]).join(' ').toLowerCase().includes(term)
+        );
+      }
+      if(y){ items = items.filter(x => anioDe(x.fecha) === y); }
+
+      items.sort((a,b)=>{
+        const da = normalizarFecha(a.fecha);
+        const db = normalizarFecha(b.fecha);
+        return s === 'asc' ? da.localeCompare(db) : db.localeCompare(da);
+      });
+
+      render(items);
+    }
+
+    $q.addEventListener('input', aplicarFiltros);
+    $year.addEventListener('change', aplicarFiltros);
+    $sort.addEventListener('change', aplicarFiltros);
+    $reset.addEventListener('click', ()=>{ $q.value=''; $year.value=''; $sort.value='desc'; aplicarFiltros(); });
+
+    $modal.addEventListener('click', ()=>{
+      $modal.classList.remove('active');
+      $modalImg.src = '';
+    });
+
+    poblarAnios(GALERIA);
+    aplicarFiltros();
+  </script>
+</body>
+</html>
